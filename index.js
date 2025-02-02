@@ -185,7 +185,7 @@ app.post("/stkquery", middleWare, async (req, res) => {
 //     "ResponseCode": "0",
 //     "ResponseDescription": "The service request has been accepted successsfully",
 //     "MerchantRequestID": "b54f-471d-93d9-f7f3bf3f7c0e2101016",
-//     "CheckoutRequestID": "ws_CO_29012025122430700719392274",
+//     "CheckoutRequestID": "ws_CO_29012025122430700727987765",
 //     "ResultCode": "1032",
 //     "ResultDesc": "Request cancelled by user"
 //   }
@@ -224,5 +224,63 @@ res.status(200).send("")
 //b2c b2b: have the user initiator password
 //to get the password..go to your app then test credentials, enter value then click generate..choose the environment
 
+
+//doing b2c which is most common:
+// B2C ROUTE OR AUTO WITHDRAWAL
+app.post("/b2c", middleWare, async(req,res)=>{
+  const { phoneNumber, amount } = req.body;
+  //you can store this in .env file when in production for security ig
+  //accessed from simulator under b2c 
+   const securityCredential = "ENcu5FJkbO9uDxj1OnafJJO33dXRsLRTF6ehk+OPhOCEYiCzQ/zEBQRD/Df2jp6YRSoHg1qXA/v/n4645c4rfCY+NIPB+3onMoO1kcKnuhPdeiU48IKHwkqcOheJFaAOYZzJQ9ExCQle+wmhyKjCo1Da2eZq/nb3Y9/rTIgvvOSNzbPLTY1k1DMjjBGjL4Wq1BUrLBt5NlOU/F784MGmNSiCKk0gEHquQ67t7uqmWML8O2qAGJ8dcXWvO5k52SGw6pejCUj2qU7GlmadabCmxDM/uU3DXME8CeD8n6MOCq0OWm4hef/vVDmU8sn2gEnTQso0+ANlbmamP2OlgIwHqQ=="
+    try {
+    const MPESA_BASE_URL =
+      process.env.MPESA_ENVIRONMENT === "live"
+        ? "https://api.safaricom.co.ke"
+        : "https://sandbox.safaricom.co.ke";
+
+        const formattedPhoneNumber = `254${phoneNumber.slice(-9)}`; //take the phone number provided and take the last nine digits
+      const response = await axios.post (
+        `${MPESA_BASE_URL}/mpesa/b2c/v1/paymentrequest`,
+        {
+            OriginatorConversationID: "1969f37b-2a47-48fd-aab6-0865ae06497d",
+            InitiatorName: "testapi",
+            SecurityCredential: securityCredential,
+            CommandID: "PromotionPayment",//there are 3 commandId:salarypayment, business and promotion payment
+            Amount: amount,
+            PartyA: "600987",//accessed from simulator under b2c api
+            PartyB: formattedPhoneNumber,//phone number to receive the stk push:should have the country code (254) without the plus sign.
+            Remarks: "Withdrawal",
+            //both urls in prod is the domain where you want it to be
+            QueueTimeOutURL: "https://mydomain.com/b2c/queue",
+            ResultURL: "https://mydomain.com/b2c/result",
+            Occasion: "Withdrawal",
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${req.mpesaToken}`,
+          },
+        }
+      )
+      return res
+      .status(200)
+      .json({
+        data: response.data,
+      });
+  } catch (error) {
+    return res.status(500).json({
+      error: error.message,
+    });
+  }
+})
+
+//correct output for b2c:
+// {
+//   "data": {
+//     "ConversationID": "AG_20250202_201055f2b86289cada9d",
+//     "OriginatorConversationID": "b54f-471d-93d9-f7f3bf3f7c0e2249790",
+//     "ResponseCode": "0",
+//     "ResponseDescription": "Accept the service request successfully."
+//   }
+// }
 const port = process.env.PORT || "8080";
 app.listen(port, () => `Server is listening on port: ${port}`);
